@@ -1,6 +1,7 @@
 const puppeteer = require("puppeteer");
+const producer = require("../../infra/kafka/kafka");
 
-(async () => {
+async function webScraping() {
   const browser = await puppeteer.launch({
     headless: false,
   });
@@ -8,7 +9,9 @@ const puppeteer = require("puppeteer");
   const page = await browser.newPage();
 
   for (let countPage = 1; countPage <= 50; countPage++) {
-    await page.goto(`https://books.toscrape.com/catalogue/page-${countPage}.html`);
+    await page.goto(
+      `https://books.toscrape.com/catalogue/page-${countPage}.html`
+    );
 
     const booksOnPage = await page.evaluate(() => {
       const allDetails = document.querySelectorAll(".product_pod");
@@ -18,13 +21,13 @@ const puppeteer = require("puppeteer");
         const itemTitle = eachItem.querySelector("h3 a").title;
         const itemPrice = eachItem.querySelector(".price_color").innerText;
         const imgUrl = eachItem.querySelector("img").src;
-        const bookUrl = eachItem.querySelector("h3 a").href;
+        const bookUrl = eachItem.querySelector("h3 a").getAttribute("href");
 
         detailsArray.push({
           title: itemTitle,
           price: itemPrice.replace("£", "R$ "),
           imageURL: imgUrl,
-          bookUrl,
+          bookUrl: `https://books.toscrape.com/catalogue/${bookUrl}`,
         });
       });
 
@@ -51,7 +54,22 @@ const puppeteer = require("puppeteer");
     }
 
     console.log(fetchDetails);
+
+    try {
+      await producer.send({
+        topic: "scraping",
+        messages: [
+          {
+            value: JSON.stringify(fetchDetails),
+          },
+        ],
+      });
+    } catch (error) {
+      console.error("Failed to send data to Kafka:", error);
+    }
   }
 
   await browser.close();
-})();
+}
+
+module.exports = { webScraping };
