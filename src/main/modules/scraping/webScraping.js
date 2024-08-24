@@ -1,7 +1,13 @@
 const puppeteer = require("puppeteer");
-const producer = require("../../infra/kafka/kafka");
+const kafkaProducer = require("../../infra/kafka/kafka");
 
 async function webScraping() {
+  const producer = new kafkaProducer({
+    clientId: "kafka_example",
+    brokers: ["localhost:9092"],
+    topic: "scraping",
+  });
+
   const browser = await puppeteer.launch({
     headless: false,
   });
@@ -45,28 +51,33 @@ async function webScraping() {
         return descElement ? descElement.innerText : "No description available";
       });
 
+      const inStock = await page.evaluate(() => {
+        const stockElement = document.querySelector(".instock.availability");
+        return stockElement ? stockElement.innerText : "Out of stock";
+      });
+
       fetchDetails.push({
         title: book.title,
         price: book.price,
         imageURL: book.imageURL,
+        inStock: inStock,
         description: description,
       });
     }
 
     console.log(fetchDetails);
 
-    try {
-      await producer.send({
-        topic: "scraping",
-        messages: [
-          {
-            value: JSON.stringify(fetchDetails),
-          },
-        ],
-      });
-    } catch (error) {
-      console.error("Failed to send data to Kafka:", error);
-    }
+    const runProducer = async () => {
+      await producer.connect();
+      await producer.sendMessage(JSON.stringify(fetchDetails));
+      await producer.disconnect();
+    };
+
+    await runProducer().catch(console.error);
+
+    await page.waitForTimeout(2000);
+
+    
   }
 
   await browser.close();

@@ -1,17 +1,26 @@
-const kafka = require("kafkajs");
+const { Kafka } = require("kafkajs");
 
-const kafkaConfig = {
-  clientId: "api",
-  brokers: ["localhost:9092"],
-};
+class KafkaProducer {
+  constructor({ clientId, brokers, topic }) {
+    this.kafka = new Kafka({ clientId, brokers });
+    this.producer = this.kafka.producer();
+    this.topic = topic;
+  }
 
-async function producer() {
-  const kafka = new kafka.Kafka(kafkaConfig);
-  const producer = kafka.producer();
+  async connect() {
+    await this.producer.connect();
+  }
 
-  await producer.connect();
+  async sendMessage(message) {
+    await this.producer.send({
+      topic: this.topic,
+      messages: [{ value: message }],
+    });
+  }
 
-  return producer;
+  async disconnect() {
+    await this.producer.disconnect();
+  }
 }
 
-module.exports = { producer };
+module.exports = KafkaProducer;

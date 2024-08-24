@@ -1,4 +1,5 @@
 const express = require ("express");
+const cron = require ("node-cron");
 const webScraping = require ("../modules/scraping/webScraping");
 
 const setupApp = () => {
@@ -10,6 +11,9 @@ const setupApp = () => {
     res.send("Scraping done!");
   });
 
+  cron.schedule("31 * * * *", async () => {
+    await webScraping.webScraping();
+  });
 
   app.get("/", (req, res) => {
     res.send("Hello World!");
