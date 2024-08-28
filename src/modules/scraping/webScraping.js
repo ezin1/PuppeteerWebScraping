@@ -1,5 +1,41 @@
 const puppeteer = require("puppeteer");
 const KafkaProducer = require("../../main/infra/kafka/kafka");
+const { Client } = require('pg');
+
+async function connectAndSaveData(fetchDetails) {
+  try {
+    // Connect to PostgreSQL database
+    const client = new Client({
+      user: 'irehdqyu',
+      host: 'isabelle.db.elephantsql.com',
+      database: 'irehdqyu',
+      password: '6DGK9C6-OCMcm11Ku2w0-MY_iBNbCufX',
+      port: 5432,
+    });
+    await client.connect();
+
+    for (const book of fetchDetails) {
+      const query = `
+        INSERT INTO books (title, price, imageURL, inStock, description)
+        VALUES ($1, $2, $3, $4, $5)
+      `;
+      const values = [
+        book.title,
+        book.price,
+        book.imageURL,
+        book.inStock,
+        book.description,
+      ];
+      await client.query(query, values);
+    }
+
+    // Disconnect from the database
+    await client.end();
+  } catch (error) {
+    console.error('Error connecting to or saving data in the database:', error);
+  }
+}
+
 
 async function webScraping() {
   const producer = new KafkaProducer({
@@ -9,7 +45,7 @@ async function webScraping() {
     timeout: 30000,
   });
 
-  await producer.connect();
+  // await producer.connect();
 
   const browser = await puppeteer.launch({
     headless: false, 
@@ -17,7 +53,7 @@ async function webScraping() {
 
   const page = await browser.newPage();
 
-  for (let countPage = 1; countPage <= 2; countPage++) {
+  for (let countPage = 1; countPage <= 50; countPage++) {
     await page.goto(
      `https://books.toscrape.com/catalogue/page-${countPage}.html`
     );
@@ -68,16 +104,16 @@ async function webScraping() {
     }
 
     console.log(fetchDetails);
-
+    await connectAndSaveData(fetchDetails);
    
-    await producer.sendMessage(JSON.stringify(fetchDetails));
+    // await producer.sendMessage(JSON.stringify(fetchDetails));
 
     
     await page.waitForTimeout(2000);
   }
 
   await browser.close();
-  await producer.disconnect();
+  // await producer.disconnect();
 }
 
 module.exports = { webScraping };
