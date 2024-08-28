@@ -12,7 +12,7 @@ async function webScraping() {
   await producer.connect();
 
   const browser = await puppeteer.launch({
-    headless: false, // Mantenha "false" para visualizar o processo de scraping, altere para "true" em produção.
+    headless: false, 
   });
 
   const page = await browser.newPage();
@@ -62,17 +62,17 @@ async function webScraping() {
         title: book.title,
         price: book.price,
         imageURL: book.imageURL,
-        inStock: inStock.trim(), // Use trim para remover espaços em branco desnecessários
+        inStock: inStock.trim(), 
         description: description,
       });
     }
 
     console.log(fetchDetails);
 
-    // Envia os detalhes dos livros para o Kafka
+   
     await producer.sendMessage(JSON.stringify(fetchDetails));
 
-    // Pausa de 2 segundos antes de passar para a próxima página
+    
     await page.waitForTimeout(2000);
   }
 
