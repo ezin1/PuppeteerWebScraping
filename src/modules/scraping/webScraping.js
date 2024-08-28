@@ -40,12 +40,12 @@ async function connectAndSaveData(fetchDetails) {
 async function webScraping() {
   const producer = new KafkaProducer({
     clientId: "scraping-client",
-    brokers: ["localhost:19092"],
-    topic: "scraping-topic",
+    brokers: ["localhost:9092"],
+    topic: "webscraping",
     timeout: 30000,
   });
 
-  // await producer.connect();
+  await producer.connect();
 
   const browser = await puppeteer.launch({
     headless: false, 
@@ -53,7 +53,7 @@ async function webScraping() {
 
   const page = await browser.newPage();
 
-  for (let countPage = 1; countPage <= 50; countPage++) {
+  for (let countPage = 1; countPage <= 2; countPage++) {
     await page.goto(
      `https://books.toscrape.com/catalogue/page-${countPage}.html`
     );
@@ -104,16 +104,16 @@ async function webScraping() {
     }
 
     console.log(fetchDetails);
-    await connectAndSaveData(fetchDetails);
+    // await connectAndSaveData(fetchDetails);
    
-    // await producer.sendMessage(JSON.stringify(fetchDetails));
+    await producer.sendMessage(JSON.stringify(fetchDetails));
 
     
     await page.waitForTimeout(2000);
   }
 
   await browser.close();
-  // await producer.disconnect();
+  await producer.disconnect();
 }
 
 module.exports = { webScraping };

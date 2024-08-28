@@ -11,9 +11,9 @@ const setupApp = () => {
     res.send("Scraping done!");
   });
 
-  cron.schedule("31 * * * *", async () => {
-    await webScraping.webScraping();
-  });
+  // cron.schedule("31 * * * *", async () => {
+  //   await webScraping.webScraping();
+  // });
 
   app.get("/", (req, res) => {
     res.send("Hello World!");

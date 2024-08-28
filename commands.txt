@@ -1,0 +1,7 @@
+ iniciar o Zookeeper
+
+.\bin\windows\zookeeper-server-start.bat .\config\zookeeper.properties
+
+inciar o kafka 
+
+.\bin\windows\kafka-server-start.bat .\config\server.properties
