@@ -1,22 +1,25 @@
 const puppeteer = require("puppeteer");
-const kafkaProducer = require("../../infra/kafka/kafka");
+const KafkaProducer = require("../../main/infra/kafka/kafka");
 
 async function webScraping() {
-  const producer = new kafkaProducer({
-    clientId: "kafka_example",
-    brokers: ["localhost:9092"],
-    topic: "scraping",
+  const producer = new KafkaProducer({
+    clientId: "scraping-client",
+    brokers: ["localhost:19092"],
+    topic: "scraping-topic",
+    timeout: 30000,
   });
 
+  await producer.connect();
+
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: false, // Mantenha "false" para visualizar o processo de scraping, altere para "true" em produção.
   });
 
   const page = await browser.newPage();
 
-  for (let countPage = 1; countPage <= 50; countPage++) {
+  for (let countPage = 1; countPage <= 2; countPage++) {
     await page.goto(
-      `https://books.toscrape.com/catalogue/page-${countPage}.html`
+     `https://books.toscrape.com/catalogue/page-${countPage}.html`
     );
 
     const booksOnPage = await page.evaluate(() => {
@@ -40,7 +43,6 @@ async function webScraping() {
       return detailsArray;
     });
 
-    // Navega para cada livro individualmente e pega a descrição
     const fetchDetails = [];
 
     for (const book of booksOnPage) {
@@ -60,27 +62,22 @@ async function webScraping() {
         title: book.title,
         price: book.price,
         imageURL: book.imageURL,
-        inStock: inStock,
+        inStock: inStock.trim(), // Use trim para remover espaços em branco desnecessários
         description: description,
       });
     }
 
     console.log(fetchDetails);
 
-    const runProducer = async () => {
-      await producer.connect();
-      await producer.sendMessage(JSON.stringify(fetchDetails));
-      await producer.disconnect();
-    };
+    // Envia os detalhes dos livros para o Kafka
+    await producer.sendMessage(JSON.stringify(fetchDetails));
 
-    await runProducer().catch(console.error);
-
+    // Pausa de 2 segundos antes de passar para a próxima página
     await page.waitForTimeout(2000);
-
-    
   }
 
   await browser.close();
+  await producer.disconnect();
 }
 
 module.exports = { webScraping };

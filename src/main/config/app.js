@@ -1,6 +1,6 @@
 const express = require ("express");
 const cron = require ("node-cron");
-const webScraping = require ("../modules/scraping/webScraping");
+const webScraping = require ("../../modules/scraping/webScraping");
 
 const setupApp = () => {
   const app = express();
